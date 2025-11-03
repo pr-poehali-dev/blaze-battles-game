@@ -68,11 +68,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         elif action == 'inventory':
             cur.execute(
-                """SELECT p.id, p.name, p.rarity, p.effect, up.obtained_at 
+                """SELECT p.id, p.name, r.name as rarity_name, r.color, p.power_type, 
+                          p.cooldown, p.damage, p.shield_duration, up.obtained_at, up.equipped_slot
                 FROM user_powers up 
-                JOIN powers p ON up.power_id = p.id 
+                JOIN powers_new p ON up.power_id = p.id 
+                JOIN rarities r ON p.rarity_id = r.id
                 WHERE up.user_id = %s 
-                ORDER BY up.obtained_at DESC""",
+                ORDER BY up.equipped_slot NULLS LAST, up.obtained_at DESC""",
                 (user_id,)
             )
             inventory = cur.fetchall()
@@ -88,8 +90,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                             'id': item[0],
                             'name': item[1],
                             'rarity': item[2],
-                            'effect': item[3],
-                            'obtained_at': str(item[4])
+                            'rarity_color': item[3],
+                            'power_type': item[4],
+                            'cooldown': item[5],
+                            'damage': item[6],
+                            'shield_duration': item[7],
+                            'obtained_at': str(item[8]),
+                            'equipped_slot': item[9]
                         }
                         for item in inventory
                     ]
@@ -146,8 +153,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
-        cur.execute("SELECT id, name, rarity, effect, drop_chance FROM powers")
+        cur.execute("""
+            SELECT p.id, p.name, r.name as rarity_name, r.color, r.drop_chance
+            FROM powers_new p
+            JOIN rarities r ON p.rarity_id = r.id
+        """)
         all_powers = cur.fetchall()
+        
+        if not all_powers:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'No powers available in the game yet'}),
+                'isBase64Encoded': False
+            }
         
         rand_num = random.uniform(0, 100)
         cumulative = 0
@@ -182,9 +203,77 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'id': selected_power[0],
                     'name': selected_power[1],
                     'rarity': selected_power[2],
-                    'effect': selected_power[3]
+                    'color': selected_power[3]
                 }
             }),
+            'isBase64Encoded': False
+        }
+    
+    if action == 'equip_power':
+        power_id = body_data.get('power_id')
+        slot = body_data.get('slot')
+        
+        if not slot or slot < 1 or slot > 3:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Invalid slot (must be 1-3)'}),
+                'isBase64Encoded': False
+            }
+        
+        cur.execute(
+            "SELECT id FROM user_powers WHERE user_id = %s AND power_id = %s",
+            (user_id, power_id)
+        )
+        if not cur.fetchone():
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 404,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Power not found in inventory'}),
+                'isBase64Encoded': False
+            }
+        
+        cur.execute(
+            "UPDATE user_powers SET equipped_slot = NULL WHERE user_id = %s AND equipped_slot = %s",
+            (user_id, slot)
+        )
+        
+        cur.execute(
+            "UPDATE user_powers SET equipped_slot = %s WHERE user_id = %s AND power_id = %s",
+            (slot, user_id, power_id)
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True}),
+            'isBase64Encoded': False
+        }
+    
+    if action == 'unequip_power':
+        power_id = body_data.get('power_id')
+        
+        cur.execute(
+            "UPDATE user_powers SET equipped_slot = NULL WHERE user_id = %s AND power_id = %s",
+            (user_id, power_id)
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'success': True}),
             'isBase64Encoded': False
         }
     

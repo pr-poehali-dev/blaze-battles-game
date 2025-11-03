@@ -90,10 +90,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             elif action == 'get_user_powers':
                 user_id = params.get('user_id')
                 cur.execute("""
-                    SELECT p.id, p.name, p.power_type, p.cooldown, p.damage, p.shield_duration
+                    SELECT p.id, p.name, p.power_type, p.cooldown, p.damage, p.shield_duration, up.equipped_slot
                     FROM user_powers up
                     JOIN powers_new p ON up.power_id = p.id
-                    WHERE up.user_id = %s
+                    WHERE up.user_id = %s AND up.equipped_slot IS NOT NULL
+                    ORDER BY up.equipped_slot
                 """, (user_id,))
                 powers = cur.fetchall()
                 return success_response({'success': True, 'powers': [dict(p) for p in powers]})
