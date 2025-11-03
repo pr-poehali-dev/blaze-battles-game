@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Start matchmaking",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "find_match",
+        "user_id": 1
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "searching": "boolean"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Check match status",
+      "method": "GET",
+      "path": "/?action=check_match&user_id=1",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "matched": "boolean"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

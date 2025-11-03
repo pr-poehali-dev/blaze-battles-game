@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Get powers catalog",
+      "method": "GET",
+      "path": "/?action=catalog",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "powers": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get user inventory",
+      "method": "GET",
+      "path": "/?action=inventory&user_id=1",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "inventory": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

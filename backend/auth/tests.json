@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "nick": "TestPlayer123",
+        "password": "testpass123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "nick": "string",
+          "money": "number",
+          "spins": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reject non-English nick",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "nick": "Игрок123",
+        "password": "testpass"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
