@@ -75,7 +75,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         cur.execute(
-            "INSERT INTO users (nick, password, money, spins) VALUES (%s, %s, 0, 0) RETURNING id, nick, money, spins, wins, losses",
+            "INSERT INTO users (nick, password, money, spins) VALUES (%s, %s, 0, 0) RETURNING id, nick, money, spins, wins, losses, is_admin",
             (nick, password_hash)
         )
         user = cur.fetchone()
@@ -94,7 +94,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'money': user[2],
                     'spins': user[3],
                     'wins': user[4],
-                    'losses': user[5]
+                    'losses': user[5],
+                    'is_admin': user[6]
                 }
             }),
             'isBase64Encoded': False
@@ -102,7 +103,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     elif action == 'login':
         cur.execute(
-            "SELECT id, nick, money, spins, wins, losses FROM users WHERE nick = %s AND password = %s",
+            "SELECT id, nick, money, spins, wins, losses, is_admin FROM users WHERE nick = %s AND password = %s",
             (nick, password_hash)
         )
         user = cur.fetchone()
@@ -128,7 +129,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'money': user[2],
                     'spins': user[3],
                     'wins': user[4],
-                    'losses': user[5]
+                    'losses': user[5],
+                    'is_admin': user[6]
                 }
             }),
             'isBase64Encoded': False
