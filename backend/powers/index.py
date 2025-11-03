@@ -36,7 +36,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         user_id = params.get('user_id')
         
         if action == 'catalog':
-            cur.execute("SELECT id, name, rarity, effect FROM powers ORDER BY drop_chance DESC")
+            cur.execute("""
+                SELECT p.id, p.name, r.name as rarity_name, p.power_type, p.cooldown, p.damage, p.shield_duration
+                FROM powers_new p
+                JOIN rarities r ON p.rarity_id = r.id
+                ORDER BY r.drop_chance ASC
+            """)
             powers = cur.fetchall()
             cur.close()
             conn.close()
@@ -46,7 +51,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
                 'body': json.dumps({
                     'powers': [
-                        {'id': p[0], 'name': p[1], 'rarity': p[2], 'effect': p[3]}
+                        {
+                            'id': p[0], 
+                            'name': p[1], 
+                            'rarity': p[2],
+                            'power_type': p[3],
+                            'cooldown': p[4],
+                            'damage': p[5],
+                            'shield_duration': p[6]
+                        }
                         for p in powers
                     ]
                 }),

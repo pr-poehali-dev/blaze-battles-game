@@ -8,7 +8,10 @@ interface Power {
   id: number;
   name: string;
   rarity: string;
-  effect: string;
+  power_type: string;
+  cooldown: number;
+  damage: number;
+  shield_duration: number;
 }
 
 interface PowersCatalogProps {
@@ -64,20 +67,45 @@ export default function PowersCatalog({ apiUrl, onBack }: PowersCatalogProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {powers.map((power) => (
-              <Card key={power.id} className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">{power.name}</h3>
-                    <Badge className={`${rarityColors[power.rarity]} text-white`}>
-                      {power.rarity}
-                    </Badge>
+            {powers.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <Icon name="Package" size={48} className="text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No powers available yet. Admin needs to create powers first.</p>
+              </div>
+            ) : (
+              powers.map((power) => (
+                <Card key={power.id} className="p-6 bg-card/50 backdrop-blur-sm border-primary/20 hover:border-primary/50 transition-all hover:scale-105">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-2">{power.name}</h3>
+                      <Badge className={`${rarityColors[power.rarity] || 'bg-gray-500'} text-white mb-2`}>
+                        {power.rarity}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                        {power.power_type}
+                      </div>
+                    </div>
+                    <Icon 
+                      name={power.power_type === 'attack' ? 'Zap' : power.power_type === 'defense' ? 'Shield' : 'Crosshair'} 
+                      size={32} 
+                      className="text-primary" 
+                    />
                   </div>
-                  <Icon name="Zap" size={32} className="text-primary" />
-                </div>
-                <p className="text-sm text-muted-foreground">{power.effect}</p>
-              </Card>
-            ))}
+                  <div className="space-y-1 text-sm">
+                    <p className="text-muted-foreground">Cooldown: <span className="text-foreground font-medium">{power.cooldown}s</span></p>
+                    {power.power_type === 'attack' && (
+                      <p className="text-muted-foreground">Damage: <span className="text-red-400 font-medium">{power.damage}</span></p>
+                    )}
+                    {power.power_type === 'defense' && (
+                      <p className="text-muted-foreground">Shield: <span className="text-blue-400 font-medium">{power.shield_duration}s</span></p>
+                    )}
+                    {power.power_type === 'counter' && (
+                      <p className="text-muted-foreground">Counter: <span className="text-purple-400 font-medium">3s</span></p>
+                    )}
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         )}
       </div>

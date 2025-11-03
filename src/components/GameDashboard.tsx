@@ -81,6 +81,8 @@ export default function GameDashboard({ user, onLogout, updateUser, apiUrls }: G
       <AdminPanel
         apiUrl={apiUrls.game}
         onBack={() => setScreen('home')}
+        currentUser={user}
+        updateUser={updateUser}
       />
     );
   }

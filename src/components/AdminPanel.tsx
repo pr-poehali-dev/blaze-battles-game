@@ -10,6 +10,13 @@ import { toast } from 'sonner';
 interface AdminPanelProps {
   apiUrl: string;
   onBack: () => void;
+  currentUser: {
+    id: number;
+    nick: string;
+    money: number;
+    spins: number;
+  };
+  updateUser: (updates: any) => void;
 }
 
 interface Rarity {
@@ -30,7 +37,7 @@ interface Power {
   shield_duration: number;
 }
 
-export default function AdminPanel({ apiUrl, onBack }: AdminPanelProps) {
+export default function AdminPanel({ apiUrl, onBack, currentUser, updateUser }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'power' | 'rarity' | 'give'>('power');
   const [rarities, setRarities] = useState<Rarity[]>([]);
   const [powers, setPowers] = useState<Power[]>([]);
@@ -230,6 +237,17 @@ export default function AdminPanel({ apiUrl, onBack }: AdminPanelProps) {
       const data = await response.json();
       if (data.success) {
         toast.success(`${giveForm.type} given successfully!`);
+        
+        // Update current user if resources were given to them
+        if (giveForm.target === 'all' || giveForm.nick === currentUser.nick) {
+          const amountToAdd = parseInt(giveForm.amount);
+          if (giveForm.type === 'spins') {
+            updateUser({ spins: currentUser.spins + amountToAdd });
+          } else {
+            updateUser({ money: currentUser.money + amountToAdd });
+          }
+        }
+        
         setGiveForm({ ...giveForm, nick: '', amount: '' });
       } else {
         toast.error(data.error || 'Failed to give resources');
