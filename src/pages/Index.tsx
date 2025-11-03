@@ -15,6 +15,7 @@ export interface User {
   spins: number;
   wins: number;
   losses: number;
+  is_admin?: boolean;
 }
 
 export default function Index() {
