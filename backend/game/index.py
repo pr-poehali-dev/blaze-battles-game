@@ -73,16 +73,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 return success_response(dict(battle))
             
             elif action == 'admin_get_rarities':
-                cur.execute("SELECT * FROM rarities ORDER BY drop_chance DESC")
+                cur.execute("SELECT id, name, drop_chance, color FROM rarities ORDER BY drop_chance DESC")
                 rarities = cur.fetchall()
                 return success_response({'success': True, 'rarities': [dict(r) for r in rarities]})
             
             elif action == 'admin_get_powers':
                 cur.execute("""
-                    SELECT p.*, r.name as rarity_name 
+                    SELECT p.id, p.name, p.rarity_id, r.name as rarity_name, r.color,
+                           p.power_type, p.cooldown, p.damage, p.shield_duration
                     FROM powers_new p 
-                    LEFT JOIN rarities r ON p.rarity_id = r.id 
-                    ORDER BY p.created_at DESC
+                    JOIN rarities r ON p.rarity_id = r.id 
+                    ORDER BY p.id DESC
                 """)
                 powers = cur.fetchall()
                 return success_response({'success': True, 'powers': [dict(p) for p in powers]})
@@ -186,6 +187,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             cur.execute("DELETE FROM rarities WHERE id = %s", (rarity_id,))
             conn.commit()
             return success_response({'success': True})
+        
+        elif action == 'admin_create_rarity':
+            return admin_create_rarity(cur, conn, body_data)
+        
+        elif action == 'admin_delete_rarity':
+            return admin_delete_rarity(cur, conn, body_data)
+        
+        elif action == 'admin_delete_power':
+            return admin_delete_power(cur, conn, body_data)
         
         elif action == 'admin_give_spins':
             return admin_give_resource(cur, conn, body_data, 'spins')
@@ -406,6 +416,60 @@ def admin_create_power(cur, conn, data: Dict[str, Any]) -> Dict[str, Any]:
            VALUES (%s, %s, %s, %s, %s, %s)""",
         (name, rarity_id, power_type, cooldown, damage, shield_duration)
     )
+    conn.commit()
+    return success_response({'success': True})
+
+
+def admin_get_rarities(cur) -> Dict[str, Any]:
+    cur.execute("SELECT id, name, drop_chance, color FROM rarities ORDER BY drop_chance DESC")
+    rarities = cur.fetchall()
+    return success_response({
+        'success': True,
+        'rarities': [dict(r) for r in rarities]
+    })
+
+
+def admin_get_powers(cur) -> Dict[str, Any]:
+    cur.execute("""
+        SELECT p.id, p.name, p.rarity_id, r.name as rarity_name, 
+               p.power_type, p.cooldown, p.damage, p.shield_duration
+        FROM powers_new p
+        JOIN rarities r ON p.rarity_id = r.id
+        ORDER BY p.id DESC
+    """)
+    powers = cur.fetchall()
+    return success_response({
+        'success': True,
+        'powers': [dict(p) for p in powers]
+    })
+
+
+def admin_create_rarity(cur, conn, data: Dict[str, Any]) -> Dict[str, Any]:
+    name = data.get('name')
+    drop_chance = data.get('drop_chance')
+    color = data.get('color', '#6B7280')
+    
+    cur.execute(
+        "INSERT INTO rarities (name, drop_chance, color) VALUES (%s, %s, %s)",
+        (name, drop_chance, color)
+    )
+    conn.commit()
+    return success_response({'success': True})
+
+
+def admin_delete_rarity(cur, conn, data: Dict[str, Any]) -> Dict[str, Any]:
+    rarity_id = data.get('rarity_id')
+    
+    cur.execute("DELETE FROM powers_new WHERE rarity_id = %s", (rarity_id,))
+    cur.execute("DELETE FROM rarities WHERE id = %s", (rarity_id,))
+    conn.commit()
+    return success_response({'success': True})
+
+
+def admin_delete_power(cur, conn, data: Dict[str, Any]) -> Dict[str, Any]:
+    power_id = data.get('power_id')
+    
+    cur.execute("DELETE FROM powers_new WHERE id = %s", (power_id,))
     conn.commit()
     return success_response({'success': True})
 
