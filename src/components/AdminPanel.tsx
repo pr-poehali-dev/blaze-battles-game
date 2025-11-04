@@ -74,8 +74,12 @@ export default function AdminPanel({ apiUrl, onBack, currentUser, updateUser }: 
     try {
       const response = await fetch(`${apiUrl}?action=admin_get_rarities`);
       const data = await response.json();
+      console.log('Rarities response:', data);
       if (data.success) {
+        console.log('Setting rarities:', data.rarities);
         setRarities(data.rarities || []);
+      } else {
+        console.error('Rarities fetch failed:', data);
       }
     } catch (error) {
       console.error('Fetch rarities error:', error);

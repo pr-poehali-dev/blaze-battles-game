@@ -34,7 +34,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     try:
         if method == 'GET':
-            params = event.get('queryStringParameters', {})
+            params = event.get('queryStringParameters') or {}
             action = params.get('action')
             
             if action == 'check_match':
