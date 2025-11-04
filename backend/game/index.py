@@ -104,6 +104,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 """, (user_id,))
                 powers = cur.fetchall()
                 return success_response({'success': True, 'powers': [dict(p) for p in powers]})
+            
+            elif action == 'get_user_slots':
+                user_id = params.get('user_id')
+                cur.execute("SELECT slot2_unlocked, slot3_unlocked FROM users WHERE id = %s", (user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return error_response('User not found', 404)
+                return success_response({
+                    'success': True,
+                    'slot2_unlocked': user['slot2_unlocked'],
+                    'slot3_unlocked': user['slot3_unlocked']
+                })
         
         if method != 'POST':
             return error_response('Method not allowed', 405)
@@ -159,7 +171,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Battle actions
         elif action == 'attack':
             battle_id = body_data.get('battle_id')
-            return handle_attack(cur, conn, battle_id, user_id, 2)
+            return handle_attack(cur, conn, battle_id, user_id, 7)
         
         elif action == 'use_power':
             battle_id = body_data.get('battle_id')
@@ -207,6 +219,35 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         elif action == 'admin_give_money':
             return admin_give_resource(cur, conn, body_data, 'money')
+        
+        elif action == 'buy_slot':
+            slot_number = body_data.get('slot_number')
+            if slot_number not in [2, 3]:
+                return error_response('Invalid slot number', 400)
+            
+            cost = 1000 if slot_number == 2 else 2000
+            slot_column = f'slot{slot_number}_unlocked'
+            
+            cur.execute(f"SELECT money, {slot_column} FROM users WHERE id = %s", (user_id,))
+            user = cur.fetchone()
+            
+            if not user:
+                return error_response('User not found', 404)
+            
+            if user[slot_column]:
+                return error_response('Slot already unlocked', 400)
+            
+            if user['money'] < cost:
+                return error_response('Not enough money', 400)
+            
+            cur.execute(
+                f"UPDATE users SET money = money - %s, {slot_column} = TRUE WHERE id = %s RETURNING money",
+                (cost, user_id)
+            )
+            result = cur.fetchone()
+            conn.commit()
+            
+            return success_response({'success': True, 'money': result['money'], 'slot_unlocked': slot_number})
         
         return error_response('Invalid action', 400)
         

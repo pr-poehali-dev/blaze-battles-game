@@ -24,7 +24,15 @@ export default function PowersPage({ user, apiUrl, onBack, updateUser }: PowersP
   }
 
   if (viewMode === 'inventory') {
-    return <InventoryScreen userId={user.id} apiUrl={apiUrl} onBack={() => setViewMode('menu')} />;
+    return (
+      <InventoryScreen 
+        userId={user.id} 
+        apiUrl={apiUrl} 
+        onBack={() => setViewMode('menu')}
+        currentUser={{ money: user.money }}
+        updateUser={updateUser}
+      />
+    );
   }
 
   if (viewMode === 'spin') {

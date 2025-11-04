@@ -22,11 +22,17 @@ interface InventoryScreenProps {
   userId: number;
   apiUrl: string;
   onBack: () => void;
+  currentUser: {
+    money: number;
+  };
+  updateUser: (updates: any) => void;
 }
 
-export default function InventoryScreen({ userId, apiUrl, onBack }: InventoryScreenProps) {
+export default function InventoryScreen({ userId, apiUrl, onBack, currentUser, updateUser }: InventoryScreenProps) {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [slot2Unlocked, setSlot2Unlocked] = useState(true);
+  const [slot3Unlocked, setSlot3Unlocked] = useState(true);
 
   const fetchInventory = async () => {
     try {
@@ -40,9 +46,57 @@ export default function InventoryScreen({ userId, apiUrl, onBack }: InventoryScr
     }
   };
 
+  const fetchSlots = async () => {
+    try {
+      const response = await fetch(`${apiUrl}?action=get_user_slots&user_id=${userId}`);
+      const data = await response.json();
+      if (data.success) {
+        setSlot2Unlocked(data.slot2_unlocked);
+        setSlot3Unlocked(data.slot3_unlocked);
+      }
+    } catch (error) {
+      console.error('Fetch slots error:', error);
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
+    fetchSlots();
   }, [userId, apiUrl]);
+
+  const handleBuySlot = async (slotNumber: number) => {
+    const cost = slotNumber === 2 ? 1000 : 2000;
+    
+    if (currentUser.money < cost) {
+      toast.error(`Not enough money! Need ${cost} coins`);
+      return;
+    }
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'buy_slot',
+          user_id: userId,
+          slot_number: slotNumber,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Slot ${slotNumber} unlocked!`);
+        if (slotNumber === 2) setSlot2Unlocked(true);
+        if (slotNumber === 3) setSlot3Unlocked(true);
+        updateUser({ money: data.money });
+      } else {
+        toast.error(data.error || 'Failed to buy slot');
+      }
+    } catch (error) {
+      console.error('Buy slot error:', error);
+      toast.error('Connection error');
+    }
+  };
 
   const handleEquip = async (powerId: number, slot: number) => {
     try {
@@ -127,8 +181,29 @@ export default function InventoryScreen({ userId, apiUrl, onBack }: InventoryScr
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[1, 2, 3].map((slot) => {
                   const power = equippedPowers.find(p => p.equipped_slot === slot);
+                  const isLocked = (slot === 2 && !slot2Unlocked) || (slot === 3 && !slot3Unlocked);
+                  const cost = slot === 2 ? 1000 : 2000;
                   
                   if (!power) {
+                    if (isLocked) {
+                      return (
+                        <Card key={slot} className="p-8 bg-card/30 backdrop-blur-sm border-dashed border-2 border-yellow-500/40">
+                          <div className="text-center">
+                            <Icon name="Lock" size={40} className="mx-auto mb-4 text-yellow-500" />
+                            <p className="text-muted-foreground text-sm mb-3">Slot {slot} Locked</p>
+                            <Button 
+                              onClick={() => handleBuySlot(slot)}
+                              size="sm"
+                              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                            >
+                              <Icon name="Coins" size={16} className="mr-1" />
+                              Unlock for {cost}
+                            </Button>
+                          </div>
+                        </Card>
+                      );
+                    }
+                    
                     return (
                       <Card key={slot} className="p-8 bg-card/30 backdrop-blur-sm border-dashed border-2 border-muted-foreground/20">
                         <div className="text-center">
@@ -239,15 +314,17 @@ export default function InventoryScreen({ userId, apiUrl, onBack }: InventoryScr
                           <>
                             {[1, 2, 3].map((slot) => {
                               const isSlotTaken = equippedPowers.some(p => p.equipped_slot === slot);
+                              const isSlotLocked = (slot === 2 && !slot2Unlocked) || (slot === 3 && !slot3Unlocked);
                               return (
                                 <Button
                                   key={slot}
                                   onClick={() => handleEquip(item.id, slot)}
-                                  disabled={isSlotTaken}
+                                  disabled={isSlotTaken || isSlotLocked}
                                   size="sm"
                                   className="flex-1"
-                                  variant={isSlotTaken ? 'outline' : 'default'}
+                                  variant={isSlotTaken || isSlotLocked ? 'outline' : 'default'}
                                 >
+                                  {isSlotLocked ? <Icon name="Lock" size={12} className="mr-1" /> : null}
                                   Slot {slot}
                                 </Button>
                               );
