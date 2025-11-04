@@ -75,7 +75,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             elif action == 'admin_get_rarities':
                 cur.execute("SELECT id, name, drop_chance, color FROM rarities ORDER BY drop_chance DESC")
                 rarities = cur.fetchall()
-                return success_response({'success': True, 'rarities': [dict(r) for r in rarities]})
+                rarities_list = []
+                for r in rarities:
+                    rarity_dict = dict(r)
+                    rarity_dict['drop_chance'] = float(rarity_dict['drop_chance'])
+                    rarities_list.append(rarity_dict)
+                return success_response({'success': True, 'rarities': rarities_list})
             
             elif action == 'admin_get_powers':
                 cur.execute("""
@@ -121,7 +126,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if opponent:
                 opponent_id = opponent['user_id']
                 cur.execute(
-                    "INSERT INTO battles (player1_id, player2_id, player1_hp, player2_hp, status) VALUES (%s, %s, 10, 10, 'active') RETURNING id",
+                    "INSERT INTO battles (player1_id, player2_id, player1_hp, player2_hp, status) VALUES (%s, %s, 100, 100, 'active') RETURNING id",
                     (user_id, opponent_id)
                 )
                 battle_id = cur.fetchone()['id']
